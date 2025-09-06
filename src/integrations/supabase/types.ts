@@ -14,7 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      brands: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      draft_versions: {
+        Row: {
+          content: string
+          created_at: string
+          draft_id: string
+          id: string
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          draft_id: string
+          id?: string
+          version: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          draft_id?: string
+          id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_versions_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drafts: {
+        Row: {
+          brand_id: string
+          created_at: string
+          current_version: number
+          email_type: Database["public"]["Enums"]["email_type"]
+          id: string
+          product_info: Json | null
+          updated_at: string
+          user_id: string
+          user_input: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          current_version?: number
+          email_type: Database["public"]["Enums"]["email_type"]
+          id?: string
+          product_info?: Json | null
+          updated_at?: string
+          user_id: string
+          user_input: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          current_version?: number
+          email_type?: Database["public"]["Enums"]["email_type"]
+          id?: string
+          product_info?: Json | null
+          updated_at?: string
+          user_id?: string
+          user_input?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drafts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_feedbacks: {
+        Row: {
+          created_at: string
+          draft_id: string
+          feedback_text: string
+          id: string
+          is_valid: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id: string
+          feedback_text: string
+          id?: string
+          is_valid?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string
+          feedback_text?: string
+          id?: string
+          is_valid?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_feedbacks_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +184,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      email_type: "product" | "sales" | "news" | "community"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +311,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      email_type: ["product", "sales", "news", "community"],
+    },
   },
 } as const
