@@ -24,8 +24,14 @@ interface Feedback {
   };
 }
 
-const Feedbacks = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+interface FeedbacksProps {
+  sidebarOpen?: boolean;
+  onSidebarToggle?: () => void;
+}
+
+const Feedbacks = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: FeedbacksProps = {}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
+  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid'>('all');
@@ -120,7 +126,7 @@ const Feedbacks = () => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
         {/* Header */}

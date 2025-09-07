@@ -20,8 +20,14 @@ interface Brand {
   created_at: string;
 }
 
-const Brands = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+interface BrandsProps {
+  sidebarOpen?: boolean;
+  onSidebarToggle?: () => void;
+}
+
+const Brands = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: BrandsProps = {}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
+  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
@@ -174,7 +180,7 @@ const Brands = () => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
         {/* Header */}

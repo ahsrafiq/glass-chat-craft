@@ -53,13 +53,19 @@ interface Message {
   feedbackId?: string;
 }
 
-const Chat = () => {
+interface ChatProps {
+  sidebarOpen?: boolean;
+  onSidebarToggle?: () => void;
+}
+
+const Chat = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: ChatProps = {}) => {
   const { draft_id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
+  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -374,7 +380,7 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
         {/* Chat Header */}
@@ -467,38 +473,116 @@ const Chat = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="product-name">Product Name</Label>
-                      <Input
-                        id="product-name"
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        placeholder="Enter product name"
-                        className="glass-hover"
-                      />
+                  {/* Dynamic fields based on email type */}
+                  {emailType === 'product' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="product-name">Product Name</Label>
+                        <Input
+                          id="product-name"
+                          value={productName}
+                          onChange={(e) => setProductName(e.target.value)}
+                          placeholder="Enter product name"
+                          className="glass-hover"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="product-price">Price</Label>
+                        <Input
+                          id="product-price"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="$99"
+                          className="glass-hover"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="product-features">Key Features</Label>
+                        <Input
+                          id="product-features"
+                          value={productFeatures}
+                          onChange={(e) => setProductFeatures(e.target.value)}
+                          placeholder="Feature 1, Feature 2"
+                          className="glass-hover"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="product-price">Price</Label>
-                      <Input
-                        id="product-price"
-                        value={productPrice}
-                        onChange={(e) => setProductPrice(e.target.value)}
-                        placeholder="$99"
-                        className="glass-hover"
-                      />
+                  )}
+
+                  {emailType === 'sales' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="sales-target">Target Audience</Label>
+                        <Input
+                          id="sales-target"
+                          value={productName}
+                          onChange={(e) => setProductName(e.target.value)}
+                          placeholder="e.g., Small business owners"
+                          className="glass-hover"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="sales-offer">Special Offer</Label>
+                        <Input
+                          id="sales-offer"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="e.g., 30% discount"
+                          className="glass-hover"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="product-features">Key Features</Label>
-                      <Input
-                        id="product-features"
-                        value={productFeatures}
-                        onChange={(e) => setProductFeatures(e.target.value)}
-                        placeholder="Feature 1, Feature 2"
-                        className="glass-hover"
-                      />
+                  )}
+
+                  {emailType === 'news' && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label htmlFor="news-website">Website URL for News</Label>
+                        <Input
+                          id="news-website"
+                          value={productName}
+                          onChange={(e) => setProductName(e.target.value)}
+                          placeholder="https://example.com"
+                          className="glass-hover"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="news-topics">Topics/Keywords</Label>
+                        <Input
+                          id="news-topics"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="AI, technology, startups"
+                          className="glass-hover"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {emailType === 'community' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="community-topic">Community Topic</Label>
+                        <Input
+                          id="community-topic"
+                          value={productName}
+                          onChange={(e) => setProductName(e.target.value)}
+                          placeholder="e.g., Weekly update"
+                          className="glass-hover"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="community-highlights">Key Highlights</Label>
+                        <Input
+                          id="community-highlights"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="New features, events"
+                          className="glass-hover"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="user-input">What would you like to communicate? *</Label>
