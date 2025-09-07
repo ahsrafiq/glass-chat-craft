@@ -22,12 +22,10 @@ interface Brand {
 
 interface BrandsProps {
   sidebarOpen?: boolean;
-  onSidebarToggle?: () => void;
+  onSidebarToggle: () => void;
 }
 
-const Brands = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: BrandsProps = {}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
-  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
+const Brands = ({ sidebarOpen = false, onSidebarToggle }: BrandsProps) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);

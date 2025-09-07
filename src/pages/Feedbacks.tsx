@@ -26,12 +26,10 @@ interface Feedback {
 
 interface FeedbacksProps {
   sidebarOpen?: boolean;
-  onSidebarToggle?: () => void;
+  onSidebarToggle: () => void;
 }
 
-const Feedbacks = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: FeedbacksProps = {}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
-  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
+const Feedbacks = ({ sidebarOpen = false, onSidebarToggle }: FeedbacksProps) => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid'>('all');

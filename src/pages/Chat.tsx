@@ -55,17 +55,15 @@ interface Message {
 
 interface ChatProps {
   sidebarOpen?: boolean;
-  onSidebarToggle?: () => void;
+  onSidebarToggle: () => void;
 }
 
-const Chat = ({ sidebarOpen: propSidebarOpen, onSidebarToggle: propOnSidebarToggle }: ChatProps = {}) => {
+const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   const { draft_id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [sidebarOpen, setSidebarOpen] = useState(propSidebarOpen || false);
-  const onSidebarToggle = propOnSidebarToggle || (() => setSidebarOpen(!sidebarOpen));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);

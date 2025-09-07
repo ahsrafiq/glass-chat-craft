@@ -63,7 +63,9 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
   const handleNewDraft = () => {
     navigate('/chat/new');
-    onToggle(); // Close sidebar on mobile
+    if (window.innerWidth < 1024) {
+      onToggle(); // Close sidebar on mobile
+    }
   };
 
   const handleSignOut = async () => {
@@ -158,7 +160,11 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                   className={`block glass-hover rounded-lg p-3 transition-all ${
                     draft_id === draft.id ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => window.innerWidth < 1024 && onToggle()}
+                   onClick={() => {
+                     if (window.innerWidth < 1024) {
+                       onToggle();
+                     }
+                   }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -227,10 +233,14 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
       {/* Sidebar */}
       <motion.div
-        initial={{ x: -320 }}
-        animate={{ x: isOpen ? 0 : -320 }}
+        initial={false}
+        animate={{ 
+          x: isOpen ? 0 : -320,
+        }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed left-0 top-0 h-full w-80 glass z-50 lg:relative lg:translate-x-0 lg:z-auto"
+        className={`fixed left-0 top-0 h-full w-80 glass z-50 lg:relative lg:translate-x-0 lg:z-auto ${
+          isOpen ? 'block' : 'hidden lg:block'
+        }`}
       >
         {sidebarContent}
       </motion.div>
