@@ -394,16 +394,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                     {draft.email_type} Email • Version {draft.current_version}
                   </p>
                 </div>
-              ) : (
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground">
-                    New Email Draft
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    Let's create something amazing
-                  </p>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

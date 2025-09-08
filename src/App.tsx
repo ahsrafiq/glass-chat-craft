@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
 import Brands from "./pages/Brands";
 import Feedbacks from "./pages/Feedbacks";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const AppContent = () => {
         <Route path="/chat/:draft_id" element={<Chat sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />} />
         <Route path="/brands" element={<Brands sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />} />
         <Route path="/feedbacks" element={<Feedbacks sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />} />
+        <Route path="/profile" element={<Profile sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>

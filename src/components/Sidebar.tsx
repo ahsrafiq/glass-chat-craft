@@ -118,7 +118,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
             variant="ghost"
             size="sm"
             onClick={onToggle}
-            className="lg:hidden text-foreground hover:bg-glass/20"
+            className="text-foreground hover:bg-glass/20"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -192,7 +192,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           <Button
             variant="ghost"
             onClick={() => navigate('/brands')}
-            className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-glass/20"
+            className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/10 bg-background/50 backdrop-blur-sm"
           >
             <Settings className="h-4 w-4 mr-2" />
             Manage Brands
@@ -200,7 +200,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           <Button
             variant="ghost"
             onClick={() => navigate('/feedbacks')}
-            className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-glass/20"
+            className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/10 bg-background/50 backdrop-blur-sm"
           >
             <MessageSquare className="h-4 w-4 mr-2" />
             View Feedback
