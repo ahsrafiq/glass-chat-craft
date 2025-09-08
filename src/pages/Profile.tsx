@@ -21,8 +21,7 @@ const Profile = ({ sidebarOpen = false, onSidebarToggle }: ProfileProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
-    display_name: '',
-    bio: '',
+    name: '',
   });
 
   useEffect(() => {
@@ -45,8 +44,7 @@ const Profile = ({ sidebarOpen = false, onSidebarToggle }: ProfileProps) => {
 
       if (data) {
         setProfile({
-          display_name: data.display_name || '',
-          bio: data.bio || '',
+          name: data.name || '',
         });
       }
     } catch (error) {
@@ -63,8 +61,7 @@ const Profile = ({ sidebarOpen = false, onSidebarToggle }: ProfileProps) => {
         .from('profiles')
         .upsert({
           user_id: user?.id,
-          display_name: profile.display_name,
-          bio: profile.bio,
+          name: profile.name,
           updated_at: new Date().toISOString(),
         });
 
@@ -157,22 +154,12 @@ const Profile = ({ sidebarOpen = false, onSidebarToggle }: ProfileProps) => {
               <CardContent>
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="display_name">Display Name</Label>
+                    <Label htmlFor="name">Display Name</Label>
                     <Input
-                      id="display_name"
-                      value={profile.display_name}
-                      onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+                      id="name"
+                      value={profile.name}
+                      onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter your display name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Input
-                      id="bio"
-                      value={profile.bio}
-                      onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-                      placeholder="Tell us about yourself"
                     />
                   </div>
 
