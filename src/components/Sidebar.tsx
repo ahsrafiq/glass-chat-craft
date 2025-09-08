@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -221,26 +221,31 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   return (
     <>
       {/* Mobile Overlay */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onToggle}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            onClick={onToggle}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <motion.div
         initial={false}
         animate={{ 
           x: isOpen ? 0 : -320,
+          opacity: isOpen ? 1 : 0,
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className={`fixed left-0 top-0 h-full w-80 glass z-50 lg:relative lg:translate-x-0 lg:z-auto ${
-          isOpen ? 'block' : 'hidden lg:block'
-        }`}
+        className="fixed left-0 top-0 h-full w-80 glass z-50 lg:relative lg:translate-x-0 lg:z-auto lg:opacity-100 lg:pointer-events-auto"
+        style={{
+          pointerEvents: isOpen ? 'auto' : 'none',
+        }}
       >
         {sidebarContent}
       </motion.div>
