@@ -177,40 +177,41 @@ const Brands = ({ sidebarOpen = false, onSidebarToggle }: BrandsProps) => {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="glass border-b border-glass-border/20 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/chat/new')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Chat
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Brand Management</h1>
-                <p className="text-sm text-muted-foreground">
-                  Manage your brands for personalized email drafts
-                </p>
-              </div>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={openNewBrandDialog}
-                  className="chat-message-user text-primary-foreground"
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/chat/new')}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Brand
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Chat
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="glass">
+                <div>
+                  <h1 className="text-lg font-semibold text-foreground">Brand Management</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your brands for personalized email drafts
+                  </p>
+                </div>
+              </div>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    onClick={openNewBrandDialog}
+                    className="chat-message-user text-primary-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Brand
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass">
                 <DialogHeader>
                   <DialogTitle>
                     {editingBrand ? 'Edit Brand' : 'Create New Brand'}
@@ -335,6 +336,7 @@ const Brands = ({ sidebarOpen = false, onSidebarToggle }: BrandsProps) => {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

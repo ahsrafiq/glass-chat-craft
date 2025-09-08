@@ -123,63 +123,61 @@ const Feedbacks = ({ sidebarOpen = false, onSidebarToggle }: FeedbacksProps) => 
   if (!user) return null;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="glass border-b border-glass-border/20 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/chat/new')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Chat
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Feedback Management</h1>
-                <p className="text-sm text-muted-foreground">
-                  Review and manage your email draft feedback
-                </p>
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/chat/new')}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Chat
+                </Button>
+                <div>
+                  <h1 className="text-lg font-semibold text-foreground">Feedback Management</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Review and manage your email draft feedback
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Filter Tabs */}
-          <div className="flex gap-2">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
-              className={filter === 'all' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
-            >
-              All ({feedbacks.length})
-            </Button>
-            <Button
-              variant={filter === 'valid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('valid')}
-              className={filter === 'valid' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
-            >
-              Valid ({feedbacks.filter(f => f.is_valid).length})
-            </Button>
-            <Button
-              variant={filter === 'invalid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('invalid')}
-              className={filter === 'invalid' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
-            >
-              Invalid ({feedbacks.filter(f => !f.is_valid).length})
-            </Button>
-          </div>
-        </div>
+            {/* Filter Tabs */}
+            <div className="flex gap-2">
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+                className={filter === 'all' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
+              >
+                All ({feedbacks.length})
+              </Button>
+              <Button
+                variant={filter === 'valid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('valid')}
+                className={filter === 'valid' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
+              >
+                Valid ({feedbacks.filter(f => f.is_valid).length})
+              </Button>
+              <Button
+                variant={filter === 'invalid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('invalid')}
+                className={filter === 'invalid' ? 'chat-message-user text-primary-foreground' : 'glass-hover'}
+              >
+                Invalid ({feedbacks.filter(f => !f.is_valid).length})
+              </Button>
+            </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
+            {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="glass rounded-lg p-6 animate-pulse">
@@ -291,6 +289,7 @@ const Feedbacks = ({ sidebarOpen = false, onSidebarToggle }: FeedbacksProps) => 
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

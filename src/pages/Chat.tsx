@@ -377,28 +377,10 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onToggle={onSidebarToggle} />
       
       <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="glass border-b border-glass-border/20 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              {draft ? (
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground">
-                    {draft.brands.name}
-                  </h1>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {draft.email_type} Email • Version {draft.current_version}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-4">
           {isFirstTime && brands.length === 0 ? (

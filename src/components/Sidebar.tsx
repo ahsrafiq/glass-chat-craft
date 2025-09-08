@@ -250,13 +250,13 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         {sidebarContent}
       </motion.div>
 
-      {/* Mobile Toggle Button */}
+      {/* Toggle Button for both Mobile and Desktop */}
       {!isOpen && (
         <Button
           onClick={onToggle}
           variant="ghost"
           size="sm"
-          className="fixed top-4 left-4 z-30 lg:hidden glass"
+          className="fixed top-4 left-4 z-30 glass"
         >
           <Menu className="h-4 w-4" />
         </Button>
