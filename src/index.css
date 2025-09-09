@@ -41,9 +41,13 @@ All colors MUST be HSL.
     --error-glass: 0 84.2% 60.2%;
 
     /* Borders and inputs */
-    --border: 0 0% 100%;
-    --input: 0 0% 100%;
+    --border: 220 13% 85%;
+    --input: 220 13% 95%;
     --ring: 217 91% 60%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
     /* Radius for glass effect */
     --radius: 1rem;
@@ -103,9 +107,13 @@ All colors MUST be HSL.
     --error-glass: 0 62.8% 30.6%;
 
     /* Dark borders */
-    --border: 240 3.7% 25.9%;
-    --input: 240 3.7% 20.9%;
+    --border: 240 3.7% 50.9%;
+    --input: 240 3.7% 45.9%;
     --ring: 217 91% 60%;
+
+    /* Dark popover */
+    --popover: 240 10% 15.9%;
+    --popover-foreground: 210 40% 98%;
 
     /* Dark sidebar */
     --sidebar-background: 222.2 84% 4.9%;
