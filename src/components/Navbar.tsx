@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User, Settings, LogOut, Menu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface NavbarProps {
   onSidebarToggle: () => void;
@@ -66,6 +67,7 @@ const Navbar = ({ onSidebarToggle }: NavbarProps) => {
       </div>
 
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
