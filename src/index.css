@@ -102,8 +102,9 @@ All colors MUST be HSL.
     --accent-foreground: 210 40% 98%;
 
     /* Dark error */
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 210 40% 98%;
+    --destructive-hover: 0 85% 35%;
     --error-glass: 0 62.8% 30.6%;
 
     /* Dark borders */
@@ -146,6 +147,11 @@ All colors MUST be HSL.
     @apply text-foreground;
     background: var(--gradient-bg);
     min-height: 100vh;
+    scroll-behavior: auto;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 
   /* Glassmorphism utilities */
