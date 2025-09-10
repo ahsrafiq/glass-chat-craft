@@ -248,30 +248,32 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       // Get selected brand details
       const selectedBrandData = brands.find(b => b.id === selectedBrand);
       
+      // Build request with only relevant details object populated
       const requestBody = {
+        draft_id: "",
         email_type: emailType,
         user_input: userInput,
         brand_details: {
           brand_name: selectedBrandData?.name || '',
           brand_description: brandDescription
         },
-        products_details: {
+        products_details: emailType === 'product' ? {
           name: productName,
           price: parseFloat(productPrice) || 0,
           key_features: productFeatures
-        },
-        sales_details: {
+        } : {},
+        sales_details: emailType === 'sales' ? {
           target_audience: targetAudience,
           special_offer: specialOffer
-        },
-        news_details: {
+        } : {},
+        news_details: emailType === 'news' ? {
           website_url: websiteUrl,
           keywords: keywords
-        },
-        community: {
+        } : {},
+        community: emailType === 'community' ? {
           community_topics: communityTopics,
           key_highlights: keyHighlights
-        }
+        } : {}
       };
 
       // Add user message immediately
@@ -282,35 +284,29 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       };
       setMessages([userMessage]);
 
-      // Call webhook for first draft
-      const response = await fetch('/api/campaign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call edge function
+      const { data, error } = await supabase.functions.invoke('campaign', {
+        body: {
           user_id: user?.id,
           brand_id: selectedBrand,
-          email_generation_request: requestBody,
-        }),
+          ...requestBody
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create draft');
+      if (error) {
+        throw error;
       }
-
-      const result = await response.json();
       
       // Add assistant response
       const assistantMessage: Message = {
         id: 'assistant-response',
         type: 'assistant',
-        content: result.email_draft_result,
+        content: data.email_draft_result,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
       // Navigate to the new draft
-      navigate(`/chat/${result.draft_id}`);
+      navigate(`/chat/${data.draft_id}`);
       
       toast({
         title: "Draft created!",
@@ -344,30 +340,34 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       setMessages(prev => [...prev, feedbackMessage]);
       setFeedbackText('');
 
-      // Call webhook for feedback
-      const response = await fetch('/api/campaign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          draft_id: draft.id,
+      // Call edge function for feedback
+      const { data, error } = await supabase.functions.invoke('campaign', {
+        body: {
           user_id: user?.id,
+          draft_id: draft.id,
           feedback_text: feedbackText,
-        }),
+          email_type: draft.email_type,
+          user_input: draft.user_input,
+          brand_details: {
+            brand_name: draft.brands.name,
+            brand_description: ''
+          },
+          products_details: {},
+          sales_details: {},
+          news_details: {},
+          community: {}
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit feedback');
+      if (error) {
+        throw error;
       }
-
-      const result = await response.json();
       
       // Add assistant response
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: result.email_draft_result,
+        content: data.email_draft_result,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
