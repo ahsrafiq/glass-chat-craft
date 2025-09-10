@@ -152,6 +152,21 @@ All colors MUST be HSL.
 
   html {
     scroll-behavior: auto;
+    overflow-anchor: none;
+  }
+
+  /* Prevent auto-scroll on page load */
+  * {
+    scroll-margin-top: 0 !important;
+    scroll-padding-top: 0 !important;
+  }
+
+  /* Prevent focus from causing scroll */
+  input:focus,
+  textarea:focus,
+  button:focus,
+  select:focus {
+    scroll-margin: 0;
   }
 
   /* Glassmorphism utilities */
