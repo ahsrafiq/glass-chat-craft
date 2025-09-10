@@ -118,18 +118,18 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
             variant="ghost"
             size="sm"
             onClick={onToggle}
-            className="text-foreground hover:bg-glass/20"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
         <Button
           onClick={handleNewDraft}
-          className="w-full mt-4 chat-message-user text-primary-foreground"
+          className="w-full mt-4 chat-message-user text-primary-foreground hover:bg-gray-200 hover:text-black"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Draft
         </Button>
+
       </div>
 
       {/* Drafts List */}
@@ -157,14 +157,13 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
               >
                 <Link
                   to={`/chat/${draft.id}`}
-                  className={`block glass-hover rounded-lg p-3 transition-all ${
-                    draft_id === draft.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                   onClick={() => {
-                     if (window.innerWidth < 1024) {
-                       onToggle();
-                     }
-                   }}
+                  className={`block glass-hover rounded-lg p-3 transition-all ${draft_id === draft.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      onToggle();
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -237,7 +236,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       {/* Sidebar */}
       <motion.div
         initial={false}
-        animate={{ 
+        animate={{
           x: isOpen ? 0 : -320,
           opacity: isOpen ? 1 : 0,
         }}

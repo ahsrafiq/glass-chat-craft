@@ -56,7 +56,6 @@ const Navbar = ({ onSidebarToggle }: NavbarProps) => {
           onClick={onSidebarToggle}
           variant="ghost"
           size="sm"
-          className="lg:hidden text-foreground hover:bg-glass/20"
         >
           <Menu className="h-4 w-4" />
         </Button>
