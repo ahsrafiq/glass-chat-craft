@@ -17,6 +17,7 @@ import { Send, Sparkles, Plus } from 'lucide-react';
 interface Brand {
   id: string;
   name: string;
+  description: string;
 }
 
 interface Draft {
@@ -116,6 +117,16 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-fill brand description when brand is selected
+  useEffect(() => {
+    if (selectedBrand) {
+      const selectedBrandData = brands.find(b => b.id === selectedBrand);
+      if (selectedBrandData) {
+        setBrandDescription(selectedBrandData.description || '');
+      }
+    }
+  }, [selectedBrand, brands]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -124,7 +135,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
     try {
       const { data, error } = await supabase
         .from('brands')
-        .select('*')
+        .select('id, name, description')
         .eq('user_id', user?.id)
         .order('name');
 
