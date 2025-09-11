@@ -43,9 +43,12 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const apiUrl = process.env.VITE_SUPABASE_URL;
+    const apiKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
     const supabase = createClient(
-      "https://dcxslpoqywduvqgtkqxf.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjeHNscG9xeXdkdXZxZ3RrcXhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNzEyNDQsImV4cCI6MjA3Mjc0NzI0NH0.vkiCR1mK4CY8FzxNxzhSBH-KgfegW6lo9HHyVNGtBOA"
+      apiUrl,
+      apiKey
     );
 
     const request: EmailGenerationRequest = await req.json();
