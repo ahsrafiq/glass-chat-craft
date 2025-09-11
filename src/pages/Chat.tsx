@@ -17,6 +17,7 @@ import { Send, Sparkles, Plus } from 'lucide-react';
 interface Brand {
   id: string;
   name: string;
+  description: string;
 }
 
 interface Draft {
@@ -72,11 +73,26 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   
   // Form states for new draft
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [brandDescription, setBrandDescription] = useState('');
   const [emailType, setEmailType] = useState('');
+  const [userInput, setUserInput] = useState('');
+  
+  // Product details
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
-  const [productFeatures, setProductFeatures] = useState('');
-  const [userInput, setUserInput] = useState('');
+  const [productFeatures, setProductFeatures] = useState<string[]>([]);
+  
+  // Sales details
+  const [targetAudience, setTargetAudience] = useState('');
+  const [specialOffer, setSpecialOffer] = useState('');
+  
+  // News details
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [keywords, setKeywords] = useState<string[]>([]);
+  
+  // Community details
+  const [communityTopics, setCommunityTopics] = useState('');
+  const [keyHighlights, setKeyHighlights] = useState('');
   
   // Feedback input
   const [feedbackText, setFeedbackText] = useState('');
@@ -101,6 +117,16 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-fill brand description when brand is selected
+  useEffect(() => {
+    if (selectedBrand) {
+      const selectedBrandData = brands.find(b => b.id === selectedBrand);
+      if (selectedBrandData) {
+        setBrandDescription(selectedBrandData.description || '');
+      }
+    }
+  }, [selectedBrand, brands]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -109,7 +135,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
     try {
       const { data, error } = await supabase
         .from('brands')
-        .select('*')
+        .select('id, name, description')
         .eq('user_id', user?.id)
         .order('name');
 
@@ -230,11 +256,41 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
     setLoading(true);
     try {
-      const productInfo = {
+      // Get selected brand details
+      const selectedBrandData = brands.find(b => b.id === selectedBrand);
+      
+      // Create draft in database first
+      const productInfo = emailType === 'product' ? {
         name: productName,
-        price: productPrice,
-        features: productFeatures,
-      };
+        price: parseFloat(productPrice) || 0,
+        key_features: productFeatures
+      } : emailType === 'sales' ? {
+        target_audience: targetAudience,
+        special_offer: specialOffer
+      } : emailType === 'news' ? {
+        website_url: websiteUrl,
+        keywords: keywords
+      } : emailType === 'community' ? {
+        community_topics: communityTopics,
+        key_highlights: keyHighlights
+      } : null;
+
+      const { data: newDraft, error: draftError } = await supabase
+        .from('drafts')
+        .insert({
+          user_id: user?.id!,
+          brand_id: selectedBrand,
+          email_type: emailType as 'product' | 'sales' | 'news' | 'community',
+          user_input: userInput,
+          product_info: productInfo,
+          current_version: 1
+        })
+        .select()
+        .single();
+
+      if (draftError) {
+        throw new Error('Failed to create draft');
+      }
 
       // Add user message immediately
       const userMessage: Message = {
@@ -244,37 +300,73 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       };
       setMessages([userMessage]);
 
-      // Call webhook for first draft
-      const response = await fetch('/api/campaign', {
+      // Build request for n8n to generate content
+      const requestBody = {
+        draft_id: newDraft.id,
+        user_id: user?.id,
+        email_type: emailType,
+        user_input: userInput,
+        brand_details: {
+          brand_name: selectedBrandData?.name || '',
+          brand_description: brandDescription
+        },
+        products_details: emailType === 'product' ? {
+          name: productName,
+          price: parseFloat(productPrice) || 0,
+          key_features: productFeatures
+        } : {},
+        sales_details: emailType === 'sales' ? {
+          target_audience: targetAudience,
+          special_offer: specialOffer
+        } : {},
+        news_details: emailType === 'news' ? {
+          website_url: websiteUrl,
+          keywords: keywords
+        } : {},
+        community: emailType === 'community' ? {
+          community_topics: communityTopics,
+          key_highlights: keyHighlights
+        } : {}
+      };
+
+      // Call n8n webhook for content generation
+      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          user_id: user?.id,
-          brand_id: selectedBrand,
-          email_type: emailType,
-          product_info: productInfo,
-          user_input: userInput,
-        }),
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create draft');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const data = await response.json();
+      
+      // Create first draft version with generated content
+      const { error: versionError } = await supabase
+        .from('draft_versions')
+        .insert({
+          draft_id: newDraft.id,
+          version: 1,
+          content: data.email_draft_result
+        });
+
+      if (versionError) {
+        throw new Error('Failed to create draft version');
+      }
       
       // Add assistant response
       const assistantMessage: Message = {
         id: 'assistant-response',
         type: 'assistant',
-        content: result.email_draft_result,
+        content: data.email_draft_result,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
       // Navigate to the new draft
-      navigate(`/chat/${result.draft_id}`);
+      navigate(`/chat/${newDraft.id}`);
       
       toast({
         title: "Draft created!",
@@ -306,10 +398,11 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         content: feedbackText,
       };
       setMessages(prev => [...prev, feedbackMessage]);
+      const currentFeedback = feedbackText;
       setFeedbackText('');
 
-      // Call webhook for feedback
-      const response = await fetch('/api/campaign', {
+      // Call n8n webhook for feedback (n8n will insert feedback)
+      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,21 +410,48 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         body: JSON.stringify({
           draft_id: draft.id,
           user_id: user?.id,
-          feedback_text: feedbackText,
-        }),
+          user_input: currentFeedback
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit feedback');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const data = await response.json();
+      
+      // Create new draft version with improved content
+      const newVersion = draft.current_version + 1;
+      const { error: versionError } = await supabase
+        .from('draft_versions')
+        .insert({
+          draft_id: draft.id,
+          version: newVersion,
+          content: data.email_draft_result
+        });
+
+      if (versionError) {
+        throw new Error('Failed to create new draft version');
+      }
+
+      // Update draft's current version
+      const { error: updateError } = await supabase
+        .from('drafts')
+        .update({ current_version: newVersion })
+        .eq('id', draft.id);
+
+      if (updateError) {
+        throw new Error('Failed to update draft version');
+      }
+
+      // Update local draft state
+      setDraft(prev => prev ? { ...prev, current_version: newVersion } : null);
       
       // Add assistant response
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: result.email_draft_result,
+        content: data.email_draft_result,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
@@ -349,11 +469,12 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
   const deleteFeedback = async (feedbackId: string) => {
     try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from('email_feedbacks')
+        .delete()
+        .eq('id', feedbackId);
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('Failed to delete feedback');
       }
 
@@ -444,36 +565,52 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                     </div>
                   </div>
 
+                  <div>
+                    <Label htmlFor="brand-description">Brand Description</Label>
+                    <Textarea
+                      id="brand-description"
+                      value={brandDescription}
+                      onChange={(e) => setBrandDescription(e.target.value)}
+                      placeholder="Describe your brand, its values, and target market..."
+                      className="glass-hover"
+                      rows={3}
+                    />
+                  </div>
+
                   {/* Dynamic fields based on email type */}
                   {emailType === 'product' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="product-name">Product Name</Label>
-                        <Input
-                          id="product-name"
-                          value={productName}
-                          onChange={(e) => setProductName(e.target.value)}
-                          placeholder="Enter product name"
-                          className="glass-hover"
-                        />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="product-name">Product Name</Label>
+                          <Input
+                            id="product-name"
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            placeholder="Enter product name"
+                            className="glass-hover"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="product-price">Price</Label>
+                          <Input
+                            id="product-price"
+                            value={productPrice}
+                            onChange={(e) => setProductPrice(e.target.value)}
+                            placeholder="299.99"
+                            type="number"
+                            step="0.01"
+                            className="glass-hover"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="product-price">Price</Label>
-                        <Input
-                          id="product-price"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          placeholder="$99"
-                          className="glass-hover"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="product-features">Key Features</Label>
+                        <Label htmlFor="product-features">Key Features (comma separated)</Label>
                         <Input
                           id="product-features"
-                          value={productFeatures}
-                          onChange={(e) => setProductFeatures(e.target.value)}
-                          placeholder="Feature 1, Feature 2"
+                          value={productFeatures.join(', ')}
+                          onChange={(e) => setProductFeatures(e.target.value.split(',').map(f => f.trim()).filter(f => f))}
+                          placeholder="Wrinkle-resistant fabric, Machine washable, Tailored fit"
                           className="glass-hover"
                         />
                       </div>
@@ -483,22 +620,22 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                   {emailType === 'sales' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="sales-target">Target Audience</Label>
+                        <Label htmlFor="target-audience">Target Audience</Label>
                         <Input
-                          id="sales-target"
-                          value={productName}
-                          onChange={(e) => setProductName(e.target.value)}
-                          placeholder="e.g., Small business owners"
+                          id="target-audience"
+                          value={targetAudience}
+                          onChange={(e) => setTargetAudience(e.target.value)}
+                          placeholder="Small Business Owners"
                           className="glass-hover"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="sales-offer">Special Offer</Label>
+                        <Label htmlFor="special-offer">Special Offer</Label>
                         <Input
-                          id="sales-offer"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          placeholder="e.g., 30% discount"
+                          id="special-offer"
+                          value={specialOffer}
+                          onChange={(e) => setSpecialOffer(e.target.value)}
+                          placeholder="20% discount"
                           className="glass-hover"
                         />
                       </div>
@@ -506,24 +643,24 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                   )}
 
                   {emailType === 'news' && (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-4">
                       <div>
-                        <Label htmlFor="news-website">Website URL for News</Label>
+                        <Label htmlFor="website-url">Website URL</Label>
                         <Input
-                          id="news-website"
-                          value={productName}
-                          onChange={(e) => setProductName(e.target.value)}
-                          placeholder="https://example.com"
+                          id="website-url"
+                          value={websiteUrl}
+                          onChange={(e) => setWebsiteUrl(e.target.value)}
+                          placeholder="www.example.com"
                           className="glass-hover"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="news-topics">Topics/Keywords</Label>
+                        <Label htmlFor="keywords">Keywords (comma separated)</Label>
                         <Input
-                          id="news-topics"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          placeholder="AI, technology, startups"
+                          id="keywords"
+                          value={keywords.join(', ')}
+                          onChange={(e) => setKeywords(e.target.value.split(',').map(k => k.trim()).filter(k => k))}
+                          placeholder="Floods, Earthquake"
                           className="glass-hover"
                         />
                       </div>
@@ -533,22 +670,22 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                   {emailType === 'community' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="community-topic">Community Topic</Label>
+                        <Label htmlFor="community-topics">Community Topics</Label>
                         <Input
-                          id="community-topic"
-                          value={productName}
-                          onChange={(e) => setProductName(e.target.value)}
-                          placeholder="e.g., Weekly update"
+                          id="community-topics"
+                          value={communityTopics}
+                          onChange={(e) => setCommunityTopics(e.target.value)}
+                          placeholder="Weekly Update"
                           className="glass-hover"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="community-highlights">Key Highlights</Label>
+                        <Label htmlFor="key-highlights">Key Highlights</Label>
                         <Input
-                          id="community-highlights"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          placeholder="New features, events"
+                          id="key-highlights"
+                          value={keyHighlights}
+                          onChange={(e) => setKeyHighlights(e.target.value)}
+                          placeholder="New Features"
                           className="glass-hover"
                         />
                       </div>
@@ -561,7 +698,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                       id="user-input"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
-                      placeholder="Describe the email you want to create. For example: 'Create a promotional email for our new product launch with a 20% discount offer...'"
+                      placeholder="Write an email announcing a 50% discount on our new shoes collection."
                       className="glass-hover min-h-[120px]"
                       required
                     />

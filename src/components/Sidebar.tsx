@@ -207,7 +207,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           <Button
             variant="ghost"
             onClick={handleSignOut}
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="w-full justify-start text-destructive hover:text-destructive dark:hover:bg-destructive/20 dark:hover:border-destructive dark:hover:border dark:hover:shadow-lg dark:hover:shadow-destructive/20 hover:bg-destructive/10 transition-all duration-200"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sign Out
