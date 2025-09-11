@@ -259,9 +259,50 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       // Get selected brand details
       const selectedBrandData = brands.find(b => b.id === selectedBrand);
       
-      // Build request with only relevant details object populated
+      // Create draft in database first
+      const productInfo = emailType === 'product' ? {
+        name: productName,
+        price: parseFloat(productPrice) || 0,
+        key_features: productFeatures
+      } : emailType === 'sales' ? {
+        target_audience: targetAudience,
+        special_offer: specialOffer
+      } : emailType === 'news' ? {
+        website_url: websiteUrl,
+        keywords: keywords
+      } : emailType === 'community' ? {
+        community_topics: communityTopics,
+        key_highlights: keyHighlights
+      } : null;
+
+      const { data: newDraft, error: draftError } = await supabase
+        .from('drafts')
+        .insert({
+          user_id: user?.id!,
+          brand_id: selectedBrand,
+          email_type: emailType as 'product' | 'sales' | 'news' | 'community',
+          user_input: userInput,
+          product_info: productInfo,
+          current_version: 1
+        })
+        .select()
+        .single();
+
+      if (draftError) {
+        throw new Error('Failed to create draft');
+      }
+
+      // Add user message immediately
+      const userMessage: Message = {
+        id: 'user-input',
+        type: 'user',
+        content: userInput,
+      };
+      setMessages([userMessage]);
+
+      // Build request for n8n to generate content
       const requestBody = {
-        draft_id: "",
+        draft_id: newDraft.id,
         user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
@@ -288,15 +329,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         } : {}
       };
 
-      // Add user message immediately
-      const userMessage: Message = {
-        id: 'user-input',
-        type: 'user',
-        content: userInput,
-      };
-      setMessages([userMessage]);
-
-      // Call n8n webhook for first time email generation
+      // Call n8n webhook for content generation
       const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
         method: 'POST',
         headers: {
@@ -311,6 +344,19 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
       const data = await response.json();
       
+      // Create first draft version with generated content
+      const { error: versionError } = await supabase
+        .from('draft_versions')
+        .insert({
+          draft_id: newDraft.id,
+          version: 1,
+          content: data.email_draft_result
+        });
+
+      if (versionError) {
+        throw new Error('Failed to create draft version');
+      }
+      
       // Add assistant response
       const assistantMessage: Message = {
         id: 'assistant-response',
@@ -320,7 +366,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       setMessages(prev => [...prev, assistantMessage]);
 
       // Navigate to the new draft
-      navigate(`/chat/${data.draft_id}`);
+      navigate(`/chat/${newDraft.id}`);
       
       toast({
         title: "Draft created!",
@@ -355,7 +401,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       const currentFeedback = feedbackText;
       setFeedbackText('');
 
-      // Call n8n webhook for feedback
+      // Call n8n webhook for feedback (n8n will insert feedback)
       const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
         method: 'POST',
         headers: {
@@ -373,6 +419,33 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       }
 
       const data = await response.json();
+      
+      // Create new draft version with improved content
+      const newVersion = draft.current_version + 1;
+      const { error: versionError } = await supabase
+        .from('draft_versions')
+        .insert({
+          draft_id: draft.id,
+          version: newVersion,
+          content: data.email_draft_result
+        });
+
+      if (versionError) {
+        throw new Error('Failed to create new draft version');
+      }
+
+      // Update draft's current version
+      const { error: updateError } = await supabase
+        .from('drafts')
+        .update({ current_version: newVersion })
+        .eq('id', draft.id);
+
+      if (updateError) {
+        throw new Error('Failed to update draft version');
+      }
+
+      // Update local draft state
+      setDraft(prev => prev ? { ...prev, current_version: newVersion } : null);
       
       // Add assistant response
       const assistantMessage: Message = {
@@ -396,11 +469,12 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
   const deleteFeedback = async (feedbackId: string) => {
     try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from('email_feedbacks')
+        .delete()
+        .eq('id', feedbackId);
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('Failed to delete feedback');
       }
 
