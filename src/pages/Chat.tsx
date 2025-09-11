@@ -302,7 +302,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
       // Build request for n8n to generate content
       const requestBody = {
-        draft_id: newDraft.id,
+        draft_id: '',
         user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
@@ -330,7 +330,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       };
 
       // Call n8n webhook for content generation
-      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
+      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook-test/api/campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,7 +402,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       setFeedbackText('');
 
       // Call n8n webhook for feedback (n8n will insert feedback)
-      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
+      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook-test/api/campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
