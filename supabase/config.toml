@@ -1,1 +1,62 @@
 project_id = "dcxslpoqywduvqgtkqxf"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+tenant_id = "realtime-dev"
+
+[studio]
+enabled = true
+port = 54324
+
+[inbucket]
+enabled = true
+port = 54325
+tls_enabled = false
+
+[storage]
+enabled = true
+port = 54326
+file_size_limit = "50MiB"
+file_transformation_enabled = true
+
+[auth]
+enabled = true
+port = 54327
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://dcxslpoqywduvqgtkqxf.supabase.co/auth/v1/callback"]
+jwt_expiry = 3600
+enable_signup = true
+enable_confirmations = false
+
+[auth.email]
+
+[edge_runtime]
+enabled = true
+port = 54328
+
+[[edge_runtime.inspector_port]]
+enabled = true
+port = 54329
+
+[functions.campaign]
+verify_jwt = false
