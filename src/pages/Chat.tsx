@@ -251,6 +251,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       // Build request with only relevant details object populated
       const requestBody = {
         draft_id: "",
+        user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
         brand_details: {
@@ -284,18 +285,20 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       };
       setMessages([userMessage]);
 
-      // Call edge function
-      const { data, error } = await supabase.functions.invoke('campaign', {
-        body: {
-          user_id: user?.id,
-          brand_id: selectedBrand,
-          ...requestBody
-        }
+      // Call n8n webhook for first time email generation
+      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
       
       // Add assistant response
       const assistantMessage: Message = {
@@ -338,30 +341,27 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         content: feedbackText,
       };
       setMessages(prev => [...prev, feedbackMessage]);
+      const currentFeedback = feedbackText;
       setFeedbackText('');
 
-      // Call edge function for feedback
-      const { data, error } = await supabase.functions.invoke('campaign', {
-        body: {
-          user_id: user?.id,
+      // Call n8n webhook for feedback
+      const response = await fetch('https://mr8v10.app.n8n.cloud/webhook-test/start-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           draft_id: draft.id,
-          feedback_text: feedbackText,
-          email_type: draft.email_type,
-          user_input: draft.user_input,
-          brand_details: {
-            brand_name: draft.brands.name,
-            brand_description: ''
-          },
-          products_details: {},
-          sales_details: {},
-          news_details: {},
-          community: {}
-        }
+          user_id: user?.id,
+          user_input: currentFeedback
+        })
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
       
       // Add assistant response
       const assistantMessage: Message = {
