@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +22,7 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
+const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, signOut } = useAuth();
@@ -30,13 +30,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const { toast } = useToast();
   const { draft_id } = useParams();
 
-  useEffect(() => {
-    if (user) {
-      fetchDrafts();
-    }
-  }, [user]);
-
-  const fetchDrafts = async () => {
+  const fetchDrafts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('drafts')
@@ -59,16 +53,22 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, toast]);
 
-  const handleNewDraft = () => {
+  useEffect(() => {
+    if (user) {
+      fetchDrafts();
+    }
+  }, [user, fetchDrafts]);
+
+  const handleNewDraft = useCallback(() => {
     navigate('/chat/new');
     if (window.innerWidth < 1024) {
       onToggle(); // Close sidebar on mobile
     }
-  };
+  }, [navigate, onToggle]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await signOut();
       navigate('/auth');
@@ -83,9 +83,9 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         variant: "destructive",
       });
     }
-  };
+  }, [signOut, navigate, toast]);
 
-  const EmptyState = () => (
+  const EmptyState = useCallback(() => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         Start a New Draft
       </Button>
     </motion.div>
-  );
+  ), [handleNewDraft]);
 
   const sidebarContent = (
     <div className="h-full flex flex-col">
@@ -262,6 +262,6 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       )}
     </>
   );
-};
+});
 
 export default Sidebar;
