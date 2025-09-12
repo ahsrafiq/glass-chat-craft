@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageSquare, LogOut, Settings, Menu, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import EmptyState from '@/components/EmptyState';
 
 interface Draft {
   id: string;
@@ -85,30 +86,17 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
     }
   }, [signOut, navigate, toast]);
 
-  const EmptyState = useCallback(() => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-12 px-4 text-center"
-    >
-      <div className="glass rounded-full p-6 mb-6">
-        <MessageSquare className="h-12 w-12 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-medium text-foreground mb-2">No drafts yet</h3>
-      <p className="text-sm text-muted-foreground mb-6">
-        Start by creating your first email draft!
-      </p>
-      <Button
-        onClick={handleNewDraft}
-        className="chat-message-user text-primary-foreground"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Start a New Draft
-      </Button>
-    </motion.div>
+  const EmptyStateComponent = useMemo(() => (
+    <EmptyState
+      icon={MessageSquare}
+      title="No drafts yet"
+      description="Start by creating your first email draft!"
+      actionLabel="Start a New Draft"
+      onAction={handleNewDraft}
+    />
   ), [handleNewDraft]);
 
-  const sidebarContent = (
+  const sidebarContent = useMemo(() => (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-glass-border/20">
@@ -146,7 +134,7 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
             </div>
           </div>
         ) : drafts.length === 0 ? (
-          <EmptyState />
+          EmptyStateComponent
         ) : (
           <div className="p-3 space-y-2">
             {drafts.map((draft) => (
@@ -215,7 +203,7 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
         </div>
       </div>
     </div>
-  );
+  ), [loading, drafts, draft_id, onToggle, handleNewDraft, handleSignOut, navigate, EmptyStateComponent]);
 
   return (
     <>
