@@ -244,6 +244,28 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
     }
   };
 
+  // Helper function to extract text from n8n response
+  const extractTextFromResponse = (responseData: any): string => {
+    // Handle array response format: [{ "text": "content" }]
+    if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].text) {
+      return responseData[0].text;
+    }
+    
+    // Handle direct object response format: { "text": "content" }
+    if (responseData && typeof responseData === 'object' && responseData.text) {
+      return responseData.text;
+    }
+    
+    // Handle string response
+    if (typeof responseData === 'string') {
+      return responseData;
+    }
+    
+    // Fallback
+    console.warn('Unexpected response format from n8n:', responseData);
+    return 'Error: Unable to process response';
+  };
+
   const createFirstDraft = async () => {
     if (!selectedBrand || !emailType || !userInput.trim()) {
       toast({
@@ -302,7 +324,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
       // Build request for n8n to generate content
       const requestBody = {
-        draft_id: '',
+        draft_id: newDraft.id, // Use the actual draft ID instead of empty string
         user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
@@ -343,6 +365,10 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       }
 
       const data = await response.json();
+      console.log('n8n Response:', data); // Debug log
+      
+      // Extract text from response using helper function
+      const generatedText = extractTextFromResponse(data);
       
       // Create first draft version with generated content
       const { error: versionError } = await supabase
@@ -350,7 +376,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         .insert({
           draft_id: newDraft.id,
           version: 1,
-          content: data.email_draft_result
+          content: generatedText
         });
 
       if (versionError) {
@@ -361,7 +387,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       const assistantMessage: Message = {
         id: 'assistant-response',
         type: 'assistant',
-        content: data.email_draft_result,
+        content: generatedText,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
@@ -378,9 +404,18 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       console.error('Error creating draft:', error);
       toast({
         title: "Error creating draft",
-        description: "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
+      
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: 'error-response',
+        type: 'assistant',
+        content: 'Sorry, I encountered an error while generating your email draft. Please try again.',
+        isError: true,
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -419,6 +454,10 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       }
 
       const data = await response.json();
+      console.log('n8n Feedback Response:', data); // Debug log
+      
+      // Extract text from response using helper function
+      const improvedText = extractTextFromResponse(data);
       
       // Create new draft version with improved content
       const newVersion = draft.current_version + 1;
@@ -427,7 +466,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         .insert({
           draft_id: draft.id,
           version: newVersion,
-          content: data.email_draft_result
+          content: improvedText
         });
 
       if (versionError) {
@@ -451,7 +490,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: data.email_draft_result,
+        content: improvedText,
       };
       setMessages(prev => [...prev, assistantMessage]);
 
@@ -459,9 +498,18 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       console.error('Error submitting feedback:', error);
       toast({
         title: "Error submitting feedback",
-        description: "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
+      
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        type: 'assistant',
+        content: 'Sorry, I encountered an error while processing your feedback. Please try again.',
+        isError: true,
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
