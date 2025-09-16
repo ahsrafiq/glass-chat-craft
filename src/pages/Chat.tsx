@@ -46,6 +46,16 @@ interface Feedback {
   created_at: string;
 }
 
+interface ChatEntry {
+  id: string;
+  type: 'user_input' | 'draft_version' | 'feedback';
+  content: string;
+  created_at: string;
+  version?: number;
+  is_valid?: boolean;
+  feedback_id?: string;
+}
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -170,7 +180,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       if (draftError) throw draftError;
       setDraft(draftData);
 
-      // Fetch draft versions and feedbacks to build message history
+      // Fetch all related data
       const [versionsResult, feedbacksResult] = await Promise.all([
         supabase
           .from('draft_versions')
@@ -190,44 +200,110 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       const versions = versionsResult.data || [];
       const feedbacks = feedbacksResult.data || [];
 
-      // Build message history
-      const messageHistory: Message[] = [];
+      // Build chronological chat history
+      const chatEntries: ChatEntry[] = [];
       
       // Add initial user input
-      messageHistory.push({
-        id: 'initial',
-        type: 'user',
+      chatEntries.push({
+        id: 'initial-input',
+        type: 'user_input',
         content: draftData.user_input,
+        created_at: draftData.created_at || new Date().toISOString()
       });
 
-      // Interleave versions and feedbacks
-      versions.forEach((version, index) => {
-        // Add draft version
-        messageHistory.push({
-          id: `version-${version.id}`,
-          type: 'assistant',
-          content: version.content,
+      // Add first version (initial response)
+      if (versions.length > 0) {
+        chatEntries.push({
+          id: `version-${versions[0].id}`,
+          type: 'draft_version',
+          content: versions[0].content,
+          created_at: versions[0].created_at,
+          version: versions[0].version
         });
+      }
 
-        // Add feedback that came after this version (if any)
-        const nextVersionDate = versions[index + 1]?.created_at;
-        const relevantFeedbacks = feedbacks.filter(f => {
-          const feedbackDate = new Date(f.created_at);
-          const versionDate = new Date(version.created_at);
-          const nextVersionDateObj = nextVersionDate ? new Date(nextVersionDate) : new Date();
+      // For subsequent versions, add feedback that led to each version
+      for (let i = 1; i < versions.length; i++) {
+        const version = versions[i];
+        
+        // Find feedback that led to this version
+        // Feedback should be created before this version and after the previous version
+        const prevVersion = versions[i - 1];
+        const relevantFeedback = feedbacks.find(f => {
+          const feedbackTime = new Date(f.created_at).getTime();
+          const prevVersionTime = new Date(prevVersion.created_at).getTime();
+          const currentVersionTime = new Date(version.created_at).getTime();
           
-          return feedbackDate > versionDate && feedbackDate < nextVersionDateObj;
+          return feedbackTime > prevVersionTime && feedbackTime < currentVersionTime;
         });
 
-        relevantFeedbacks.forEach(feedback => {
-          messageHistory.push({
+        if (relevantFeedback) {
+          chatEntries.push({
+            id: `feedback-${relevantFeedback.id}`,
+            type: 'feedback',
+            content: relevantFeedback.feedback_text,
+            created_at: relevantFeedback.created_at,
+            is_valid: relevantFeedback.is_valid,
+            feedback_id: relevantFeedback.id
+          });
+        }
+
+        // Add the version
+        chatEntries.push({
+          id: `version-${version.id}`,
+          type: 'draft_version',
+          content: version.content,
+          created_at: version.created_at,
+          version: version.version
+        });
+      }
+
+      // Add any remaining feedback that hasn't been addressed yet
+      const lastVersion = versions[versions.length - 1];
+      if (lastVersion) {
+        const remainingFeedbacks = feedbacks.filter(f => {
+          const feedbackTime = new Date(f.created_at).getTime();
+          const lastVersionTime = new Date(lastVersion.created_at).getTime();
+          return feedbackTime > lastVersionTime;
+        });
+
+        remainingFeedbacks.forEach(feedback => {
+          chatEntries.push({
             id: `feedback-${feedback.id}`,
-            type: 'user',
+            type: 'feedback',
             content: feedback.feedback_text,
-            isError: !feedback.is_valid,
-            feedbackId: feedback.id,
+            created_at: feedback.created_at,
+            is_valid: feedback.is_valid,
+            feedback_id: feedback.id
           });
         });
+      }
+
+      // Convert to messages format
+      const messageHistory: Message[] = chatEntries.map(entry => {
+        switch (entry.type) {
+          case 'user_input':
+          case 'feedback':
+            return {
+              id: entry.id,
+              type: 'user',
+              content: entry.content,
+              isError: entry.type === 'feedback' ? !entry.is_valid : false,
+              feedbackId: entry.feedback_id
+            };
+          case 'draft_version':
+            return {
+              id: entry.id,
+              type: 'assistant',
+              content: entry.content
+            };
+          default:
+            return {
+              id: entry.id,
+              type: 'user',
+              content: entry.content
+            };
+        }
       });
 
       setMessages(messageHistory);
@@ -324,7 +400,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
       // Build request for n8n to generate content
       const requestBody = {
-        draft_id: newDraft.id, // Use the actual draft ID instead of empty string
+        draft_id: newDraft.id,
         user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
@@ -365,7 +441,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       }
 
       const data = await response.json();
-      console.log('n8n Response:', data); // Debug log
+      console.log('n8n Response:', data);
       
       // Extract text from response using helper function
       const generatedText = extractTextFromResponse(data);
@@ -454,7 +530,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       }
 
       const data = await response.json();
-      console.log('n8n Feedback Response:', data); // Debug log
+      console.log('n8n Feedback Response:', data);
       
       // Extract text from response using helper function
       const improvedText = extractTextFromResponse(data);
@@ -791,6 +867,14 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                       onDelete={message.feedbackId ? () => deleteFeedback(message.feedbackId!) : undefined}
                     />
                   ))}
+                  {loading && (
+                    <ChatMessage
+                      key="loading"
+                      type="assistant"
+                      content="Generating response..."
+                      isLoading={true}
+                    />
+                  )}
                 </div>
               )}
               <div ref={messagesEndRef} />

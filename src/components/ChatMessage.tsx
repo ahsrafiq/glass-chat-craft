@@ -9,6 +9,7 @@ interface ChatMessageProps {
   isError?: boolean;
   onDelete?: () => void;
   canDelete?: boolean;
+  isLoading?: boolean;
 }
 
 const ChatMessage = ({ type, content, isError = false, onDelete, canDelete = false }: ChatMessageProps) => {
