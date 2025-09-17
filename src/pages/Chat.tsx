@@ -61,7 +61,6 @@ interface Message {
   type: 'user' | 'assistant';
   content: string;
   isError?: boolean;
-  feedbackId?: string;
 }
 
 interface ChatProps {
@@ -115,6 +114,9 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       return;
     }
 
+    // Reset loading state when switching between drafts
+    setLoading(false);
+    
     if (draft_id === 'new') {
       setIsFirstTime(true);
       fetchBrands();
@@ -126,6 +128,28 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup loading state on unmount
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
+
+  // Handle tab visibility changes to reset loading state
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Reset loading state when tab becomes visible
+        setLoading(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Auto-fill brand description when brand is selected
   useEffect(() => {
@@ -177,8 +201,14 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         .eq('user_id', user?.id)
         .single();
 
-      if (draftError) throw draftError;
+      if (draftError) {
+        console.error('Draft error:', draftError);
+        throw draftError;
+      }
+      
+      console.log('Draft data:', draftData);
       setDraft(draftData);
+      setIsFirstTime(false); // Make sure we don't show the form
 
       // Fetch all related data
       const [versionsResult, feedbacksResult] = await Promise.all([
@@ -194,118 +224,88 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
           .order('created_at')
       ]);
 
+      console.log('Versions:', versionsResult.data);
+      console.log('Feedbacks:', feedbacksResult.data);
+
       if (versionsResult.error) throw versionsResult.error;
       if (feedbacksResult.error) throw feedbacksResult.error;
 
       const versions = versionsResult.data || [];
       const feedbacks = feedbacksResult.data || [];
 
-      // Build chronological chat history
-      const chatEntries: ChatEntry[] = [];
+      // Build message history in chronological order
+      const messageHistory: Message[] = [];
       
       // Add initial user input
-      chatEntries.push({
+      messageHistory.push({
         id: 'initial-input',
-        type: 'user_input',
+        type: 'user',
         content: draftData.user_input,
-        created_at: draftData.created_at || new Date().toISOString()
       });
 
-      // Add first version (initial response)
+      // If we have versions, build the conversation
       if (versions.length > 0) {
-        chatEntries.push({
+        // Add first version (response to initial input)
+        messageHistory.push({
           id: `version-${versions[0].id}`,
-          type: 'draft_version',
+          type: 'assistant',
           content: versions[0].content,
-          created_at: versions[0].created_at,
-          version: versions[0].version
         });
-      }
 
-      // For subsequent versions, add feedback that led to each version
-      for (let i = 1; i < versions.length; i++) {
-        const version = versions[i];
-        
-        // Find feedback that led to this version
-        // Feedback should be created before this version and after the previous version
-        const prevVersion = versions[i - 1];
-        const relevantFeedback = feedbacks.find(f => {
-          const feedbackTime = new Date(f.created_at).getTime();
-          const prevVersionTime = new Date(prevVersion.created_at).getTime();
-          const currentVersionTime = new Date(version.created_at).getTime();
+        // For remaining versions, interleave with feedback
+        for (let i = 1; i < versions.length; i++) {
+          const currentVersion = versions[i];
+          const previousVersion = versions[i - 1];
           
-          return feedbackTime > prevVersionTime && feedbackTime < currentVersionTime;
-        });
+          // Find feedback that led to this version
+          // Look for feedback created between previous version and current version
+          const relevantFeedback = feedbacks.find(f => {
+            const feedbackTime = new Date(f.created_at).getTime();
+            const prevVersionTime = new Date(previousVersion.created_at).getTime();
+            const currentVersionTime = new Date(currentVersion.created_at).getTime();
+            
+            return feedbackTime > prevVersionTime && feedbackTime <= currentVersionTime;
+          });
 
-        if (relevantFeedback) {
-          chatEntries.push({
-            id: `feedback-${relevantFeedback.id}`,
-            type: 'feedback',
-            content: relevantFeedback.feedback_text,
-            created_at: relevantFeedback.created_at,
-            is_valid: relevantFeedback.is_valid,
-            feedback_id: relevantFeedback.id
+          // Add feedback if found
+          if (relevantFeedback) {
+            messageHistory.push({
+              id: `feedback-${relevantFeedback.id}`,
+              type: 'user',
+              content: relevantFeedback.feedback_text,
+              isError: !relevantFeedback.is_valid,
+            });
+          }
+
+          // Add the version response
+          messageHistory.push({
+            id: `version-${currentVersion.id}`,
+            type: 'assistant',
+            content: currentVersion.content,
           });
         }
 
-        // Add the version
-        chatEntries.push({
-          id: `version-${version.id}`,
-          type: 'draft_version',
-          content: version.content,
-          created_at: version.created_at,
-          version: version.version
-        });
-      }
-
-      // Add any remaining feedback that hasn't been addressed yet
-      const lastVersion = versions[versions.length - 1];
-      if (lastVersion) {
-        const remainingFeedbacks = feedbacks.filter(f => {
-          const feedbackTime = new Date(f.created_at).getTime();
-          const lastVersionTime = new Date(lastVersion.created_at).getTime();
-          return feedbackTime > lastVersionTime;
-        });
-
-        remainingFeedbacks.forEach(feedback => {
-          chatEntries.push({
-            id: `feedback-${feedback.id}`,
-            type: 'feedback',
-            content: feedback.feedback_text,
-            created_at: feedback.created_at,
-            is_valid: feedback.is_valid,
-            feedback_id: feedback.id
+        // Add any remaining feedback that hasn't been addressed
+        if (versions.length > 0) {
+          const lastVersion = versions[versions.length - 1];
+          const pendingFeedbacks = feedbacks.filter(f => {
+            const feedbackTime = new Date(f.created_at).getTime();
+            const lastVersionTime = new Date(lastVersion.created_at).getTime();
+            return feedbackTime > lastVersionTime;
           });
-        });
+
+          pendingFeedbacks.forEach(feedback => {
+            messageHistory.push({
+              id: `pending-feedback-${feedback.id}`,
+              type: 'user',
+              content: feedback.feedback_text,
+              isError: !feedback.is_valid,
+            });
+          });
+        }
       }
 
-      // Convert to messages format
-      const messageHistory: Message[] = chatEntries.map(entry => {
-        switch (entry.type) {
-          case 'user_input':
-          case 'feedback':
-            return {
-              id: entry.id,
-              type: 'user',
-              content: entry.content,
-              isError: entry.type === 'feedback' ? !entry.is_valid : false,
-              feedbackId: entry.feedback_id
-            };
-          case 'draft_version':
-            return {
-              id: entry.id,
-              type: 'assistant',
-              content: entry.content
-            };
-          default:
-            return {
-              id: entry.id,
-              type: 'user',
-              content: entry.content
-            };
-        }
-      });
-
+      console.log('Message history:', messageHistory);
       setMessages(messageHistory);
     } catch (error) {
       console.error('Error fetching draft:', error);
@@ -314,7 +314,8 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
         description: "Please try again.",
         variant: "destructive",
       });
-      navigate('/chat/new');
+      // Don't navigate away, just show error
+      setIsFirstTime(true);
     } finally {
       setLoading(false);
     }
@@ -400,7 +401,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
       // Build request for n8n to generate content
       const requestBody = {
-        draft_id: newDraft.id,
+        draft_id: '',
         user_id: user?.id,
         email_type: emailType,
         user_input: userInput,
@@ -588,34 +589,6 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const deleteFeedback = async (feedbackId: string) => {
-    try {
-      const { error } = await supabase
-        .from('email_feedbacks')
-        .delete()
-        .eq('id', feedbackId);
-
-      if (error) {
-        throw new Error('Failed to delete feedback');
-      }
-
-      // Remove message from UI
-      setMessages(prev => prev.filter(m => m.feedbackId !== feedbackId));
-      
-      toast({
-        title: "Feedback deleted",
-        description: "The feedback has been removed.",
-      });
-    } catch (error) {
-      console.error('Error deleting feedback:', error);
-      toast({
-        title: "Error deleting feedback",
-        description: "Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -863,17 +836,46 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                       type={message.type}
                       content={message.content}
                       isError={message.isError}
-                      canDelete={!!(message.isError && message.feedbackId)}
-                      onDelete={message.feedbackId ? () => deleteFeedback(message.feedbackId!) : undefined}
                     />
                   ))}
                   {loading && (
-                    <ChatMessage
-                      key="loading"
-                      type="assistant"
-                      content="Generating response..."
-                      isLoading={true}
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex gap-4 justify-start mb-6"
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full glass flex items-center justify-center">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full"
+                        />
+                      </div>
+                      <div className="max-w-[80%]">
+                        <div className="chat-message-assistant text-foreground rounded-2xl px-4 py-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">Generating response</span>
+                            <div className="flex space-x-1">
+                              <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                                className="w-2 h-2 bg-primary rounded-full"
+                              />
+                              <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                                className="w-2 h-2 bg-primary rounded-full"
+                              />
+                              <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                                className="w-2 h-2 bg-primary rounded-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
                 </div>
               )}

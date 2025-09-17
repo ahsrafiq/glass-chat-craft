@@ -4,7 +4,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Plus, MessageSquare, LogOut, Settings, Menu, X } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, MessageSquare, LogOut, Settings, Menu, X, MoreVertical, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import EmptyState from '@/components/EmptyState';
 
@@ -26,6 +32,7 @@ interface SidebarProps {
 const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -86,6 +93,71 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
     }
   }, [signOut, navigate, toast]);
 
+  const handleDeleteDraft = useCallback(async (draftId: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent event bubbling
+    
+    setDeletingDraftId(draftId);
+    
+    try {
+      // First delete all draft versions
+      const { error: versionsError } = await supabase
+        .from('draft_versions')
+        .delete()
+        .eq('draft_id', draftId);
+
+      if (versionsError) {
+        console.error('Error deleting draft versions:', versionsError);
+        throw new Error('Failed to delete draft versions');
+      }
+
+      // Delete all feedback related to this draft
+      const { error: feedbackError } = await supabase
+        .from('email_feedbacks')
+        .delete()
+        .eq('draft_id', draftId);
+
+      if (feedbackError) {
+        console.error('Error deleting draft feedback:', feedbackError);
+        throw new Error('Failed to delete draft feedback');
+      }
+
+      // Finally delete the draft itself
+      const { error: draftError } = await supabase
+        .from('drafts')
+        .delete()
+        .eq('id', draftId)
+        .eq('user_id', user?.id);
+
+      if (draftError) {
+        console.error('Error deleting draft:', draftError);
+        throw new Error('Failed to delete draft');
+      }
+
+      // Remove draft from local state
+      setDrafts(prevDrafts => prevDrafts.filter(draft => draft.id !== draftId));
+      
+      // If we're currently viewing the deleted draft, navigate to new chat
+      if (draft_id === draftId) {
+        navigate('/chat/new');
+      }
+
+      toast({
+        title: "Draft deleted",
+        description: "The draft and all its versions have been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      toast({
+        title: "Error deleting draft",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingDraftId(null);
+    }
+  }, [user?.id, draft_id, navigate, toast]);
+
   const EmptyStateComponent = useMemo(() => (
     <EmptyState
       icon={MessageSquare}
@@ -117,7 +189,6 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
           <Plus className="h-4 w-4 mr-2" />
           New Draft
         </Button>
-
       </div>
 
       {/* Drafts List */}
@@ -142,11 +213,13 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
                 key={draft.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                className="relative"
               >
                 <Link
                   to={`/chat/${draft.id}`}
-                  className={`block glass-hover rounded-lg p-3 transition-all ${draft_id === draft.id ? 'ring-2 ring-primary' : ''
-                    }`}
+                  className={`block glass-hover rounded-lg p-3 pr-10 transition-all ${
+                    draft_id === draft.id ? 'ring-2 ring-primary' : ''
+                  }`}
                   onClick={() => {
                     if (window.innerWidth < 1024) {
                       onToggle();
@@ -167,6 +240,35 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
                     </div>
                   </div>
                 </Link>
+                
+                {/* Three-dot menu */}
+                <div className="absolute top-2 right-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-glass/20"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="glass">
+                      <DropdownMenuItem
+                        onClick={(e) => handleDeleteDraft(draft.id, e)}
+                        disabled={deletingDraftId === draft.id}
+                        className="text-destructive hover:text-destructive focus:text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {deletingDraftId === draft.id ? 'Deleting...' : 'Delete Draft'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -203,7 +305,7 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
         </div>
       </div>
     </div>
-  ), [loading, drafts, draft_id, onToggle, handleNewDraft, handleSignOut, navigate, EmptyStateComponent]);
+  ), [loading, drafts, draft_id, onToggle, handleNewDraft, handleSignOut, navigate, EmptyStateComponent, handleDeleteDraft, deletingDraftId]);
 
   return (
     <>
