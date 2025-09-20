@@ -89,6 +89,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   // Product details
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productFeaturesInput, setProductFeaturesInput] = useState(''); // Raw input string
   const [productFeatures, setProductFeatures] = useState<string[]>([]);
   
   // Sales details
@@ -97,6 +98,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
   
   // News details
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [keywordsInput, setKeywordsInput] = useState(''); // Raw input string
   const [keywords, setKeywords] = useState<string[]>([]);
   
   // Community details
@@ -163,6 +165,10 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const processKeywords = (input: string): string[] => {
+    return input.split(',').map(k => k.trim()).filter(k => k.length > 0);
   };
 
   const fetchBrands = async () => {
@@ -429,7 +435,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       };
 
       // Call n8n webhook for content generation
-      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook-test/api/campaign', {
+      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook/api/campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -514,7 +520,7 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
       setFeedbackText('');
 
       // Call n8n webhook for feedback (n8n will insert feedback)
-      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook-test/api/campaign', {
+      const response = await fetch('https://ahsaanrafiq.app.n8n.cloud/webhook/api/campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -705,8 +711,11 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                         <Label htmlFor="product-features">Key Features (comma separated)</Label>
                         <Input
                           id="product-features"
-                          value={productFeatures.join(', ')}
-                          onChange={(e) => setProductFeatures(e.target.value.split(',').map(f => f.trim()).filter(f => f))}
+                          value={productFeaturesInput}
+                          onChange={(e) => {
+                            setProductFeaturesInput(e.target.value);
+                            setProductFeatures(processKeywords(e.target.value));
+                          }}
                           placeholder="Wrinkle-resistant fabric, Machine washable, Tailored fit"
                           className="glass-hover"
                         />
@@ -755,9 +764,12 @@ const Chat = ({ sidebarOpen = false, onSidebarToggle }: ChatProps) => {
                         <Label htmlFor="keywords">Keywords (comma separated)</Label>
                         <Input
                           id="keywords"
-                          value={keywords.join(', ')}
-                          onChange={(e) => setKeywords(e.target.value.split(',').map(k => k.trim()).filter(k => k))}
-                          placeholder="Floods, Earthquake"
+                          value={keywordsInput}
+                          onChange={(e) => {
+                            setKeywordsInput(e.target.value);
+                            setKeywords(processKeywords(e.target.value));
+                          }}
+                          placeholder="Climate change, Natural disasters"
                           className="glass-hover"
                         />
                       </div>
