@@ -33,10 +33,23 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { draft_id } = useParams();
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const fetchDrafts = useCallback(async () => {
     try {
@@ -331,9 +344,13 @@ const Sidebar = memo(({ isOpen, onToggle }: SidebarProps) => {
           opacity: isOpen ? 1 : 0,
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed left-0 top-0 h-full w-80 glass z-50 lg:relative lg:translate-x-0 lg:z-auto lg:opacity-100 lg:pointer-events-auto"
+        className={`fixed left-0 top-0 h-full w-80 glass z-50 ${
+          isMobile 
+            ? '' // On mobile: only show when isOpen is true
+            : 'lg:relative lg:translate-x-0 lg:z-auto lg:opacity-100 lg:pointer-events-auto' // On desktop: always visible
+        }`}
         style={{
-          pointerEvents: isOpen ? 'auto' : 'none',
+          pointerEvents: isOpen ? 'auto' : isMobile ? 'none' : 'auto',
         }}
       >
         {sidebarContent}

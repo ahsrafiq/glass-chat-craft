@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,9 +18,28 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Start open on desktop
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Check if it's mobile on initial load
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024; // Only open by default on desktop (lg breakpoint)
+    }
+    return false; // Default to closed if window is not available (SSR)
+  });
   const { user } = useAuth();
   const location = useLocation();
+
+   useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && !sidebarOpen) {
+        setSidebarOpen(true); // Auto-open when switching to desktop
+      } else if (window.innerWidth < 1024 && sidebarOpen) {
+        setSidebarOpen(false); // Auto-close when switching to mobile
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
   
   const showNavbar = user && location.pathname !== '/auth' && location.pathname !== '/';
 
