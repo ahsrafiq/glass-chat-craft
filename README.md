@@ -1,6 +1,6 @@
 # Glass Chat Craft
 
-![Glass Chat Craft Screenshot](file:///c:/Users/HP/Desktop/Chat%20App/glass-chat-craft/image.png)
+![Glass Chat Craft Screenshot](./image.png)
 
 ## 🎯 What It Is
 
